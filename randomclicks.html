@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3x3 Click Grid</title>
+    <style>
+      .grid-container {
+        display: grid;
+        grid-template-columns: repeat(3, 100px);
+        grid-template-rows: repeat(3, 100px);
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+      .grid-item {
+        width: 100px;
+        height: 100px;
+        background-color: #ccc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        user-select: none;
+      }
+      .flash {
+        background-color: #f00;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="sequenceDisplay"></div>
+    <div class="grid-container">
+      <div class="grid-item" data-id="1">1</div>
+      <div class="grid-item" data-id="2">2</div>
+      <div class="grid-item" data-id="3">3</div>
+      <div class="grid-item" data-id="4">4</div>
+      <div class="grid-item" data-id="5">5</div>
+      <div class="grid-item" data-id="6">6</div>
+      <div class="grid-item" data-id="7">7</div>
+      <div class="grid-item" data-id="8">8</div>
+      <div class="grid-item" data-id="9">9</div>
+    </div>
+    <div id="entropyDisplay"></div>
+    <div id="entropyChart"></div>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script>
+      const items = document.querySelectorAll(".grid-item");
+      const sequenceDisplay = document.getElementById("sequenceDisplay");
+      const entropyDisplay = document.getElementById("entropyDisplay");
+      const entropyChart = document.getElementById("entropyChart");
+
+      let sequence = [];
+      let entropyData = [];
+
+      items.forEach((item) => {
+        item.addEventListener("click", () => {
+          const itemId = parseInt(item.dataset.id);
+          item.classList.add("flash");
+          setTimeout(() => {
+            item.classList.remove("flash");
+          }, 300);
+
+          sequence.push(itemId);
+          if (sequence.length > 10) {
+            sequence.shift();
+          }
+
+          sequenceDisplay.textContent =
+            "Click sequence: " + sequence.join(", ");
+
+          const entropy = calculateEntropy(sequence);
+          entropyDisplay.textContent = "Entropy: " + entropy.toFixed(2);
+
+          if (sequence.length === 10) {
+            entropyData.push({ x: entropyData.length + 1, y: entropy });
+            updateEntropyChart(entropyData);
+          }
+        });
+      });
+
+      function calculateEntropy(sequence) {
+        const frequency = Array(9).fill(0);
+        sequence.forEach((item) => {
+          frequency[item - 1]++;
+        });
+
+        let entropy = 0;
+        for (const count of frequency) {
+          if (count > 0) {
+            const p = count / sequence.length;
+            entropy -= p * Math.log2(p);
+          }
+        }
+
+        return entropy;
+      }
+
+      function updateEntropyChart(data) {
+        const chartData = {
+          x: data.map((point) => point.x),
+          y: data.map((point) => point.y),
+          mode: "lines+markers",
+          type: "scatter",
+          name: "Entropy",
+        };
+
+        if (window.myEntropyChart) {
+          Plotly.update(entropyChart, { x: [chartData.x], y: [chartData.y] });
+        } else {
+          const layout = {
+            title: "Entropy Time Series",
+            xaxis: { title: "Click Sets" },
+            yaxis: { title: "Entropy" },
+          };
+
+          Plotly.newPlot(entropyChart, [chartData], layout).then((chart) => {
+            window.myEntropyChart = chart;
+          });
+        }
+      }
+    </script>
+  </body>
+</html>
